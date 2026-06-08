@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Cube World</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a2e; overflow: hidden; font-family: monospace; }
+    canvas { display: block; }
+    #settings-btn {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      background: rgba(0,0,0,0.6);
+      color: #ccc;
+      border: 1px solid #555;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+      cursor: pointer;
+      z-index: 10;
+    }
+    #settings-btn:hover { background: rgba(40,40,70,0.85); }
+    #settings-panel {
+      position: fixed;
+      top: 46px;
+      left: 12px;
+      width: 270px;
+      background: rgba(10,10,25,0.92);
+      border: 1px solid #444;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 13px;
+      color: #ccc;
+      display: none;
+      z-index: 10;
+    }
+    .s-section { border-bottom: 1px solid #2a2a3a; }
+    .s-section:last-child { border-bottom: none; }
+    .s-header {
+      padding: 9px 14px;
+      cursor: pointer;
+      user-select: none;
+      color: #7ecfff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .s-header:hover { background: rgba(255,255,255,0.04); }
+    .s-arrow { font-size: 10px; transition: transform 0.15s; display: inline-block; }
+    .s-header.open .s-arrow { transform: rotate(90deg); }
+    .s-body { padding: 4px 14px 12px; display: none; line-height: 1.8; }
+    .s-body.open { display: block; }
+    .s-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 5px 0;
+    }
+    .s-row label { color: #aaa; flex: 0 0 auto; }
+    .s-row input[type=range] { flex: 1; min-width: 0; }
+    .s-row .val { color: #fff; min-width: 36px; text-align: right; }
+    .action-btn {
+      position: fixed;
+      right: 12px;
+      width: 140px;
+      padding: 8px 0;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: center;
+    }
+    #regen      { top: 12px;  background: #2a4a7f; color: #cce; border: 1px solid #4a7abf; }
+    #regen:hover { background: #3a5a9f; }
+    #dropAgent  { top: 48px;  background: #4a2a6f; color: #ddc; border: 1px solid #8a5abf; }
+    #dropAgent:hover { background: #5a3a8f; }
+    #placeRed   { top: 84px;  background: #6a1a1a; color: #fcc; border: 1px solid #bf4a4a; }
+    #placeRed:hover { background: #8a2a2a; }
+    #togglePov  { top: 120px; background: #1a4a3a; color: #cfe; border: 1px solid #3a9a7a; }
+    #togglePov:hover { background: #2a6a5a; }
+    #flatWorld  { top: 156px; background: #3a3a1a; color: #ffe; border: 1px solid #9a9a3a; }
+    #flatWorld:hover { background: #5a5a2a; }
+    #palette {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+    }
+    .pal-slot {
+      width: 48px;
+      height: 48px;
+      border-radius: 6px;
+      border: 2px solid #555;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: monospace;
+      font-size: 11px;
+      color: #fff;
+      cursor: default;
+      gap: 4px;
+      background: rgba(0,0,0,0.55);
+      transition: border-color 0.1s;
+    }
+    .pal-swatch {
+      width: 22px;
+      height: 22px;
+      border-radius: 3px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .pal-slot.pal-active { border-color: #fff; background: rgba(255,255,255,0.12); }
+    #points-wrap {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #points {
+      background: rgba(0,0,0,0.65);
+      color: #fff;
+      font-family: monospace;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+    #reset-points {
+      background: rgba(0,0,0,0.55);
+      color: #aaa;
+      border: 1px solid #444;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    #reset-points:hover { background: rgba(60,20,20,0.7); color: #faa; border-color: #844; }
+    #pov {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      width: 320px;
+      height: 200px;
+      border: 2px solid #ff4444;
+      border-radius: 4px;
+      pointer-events: none;
+      display: none;
+    }
+    #pov.pov-fullscreen {
+      top: 0; left: 0; right: 0; bottom: 0;
+      width: 100%; height: 100%;
+      border-radius: 0;
+      border-width: 0;
+    }
+    #pov-label {
+      position: absolute;
+      top: 4px;
+      left: 8px;
+      color: #ff6666;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+    #pov-controls {
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      display: flex;
+      gap: 4px;
+      pointer-events: all;
+    }
+    .pov-btn {
+      background: rgba(0,0,0,0.55);
+      color: #ccc;
+      border: 1px solid #555;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      padding: 2px 6px;
+      cursor: pointer;
+      line-height: 1.4;
+    }
+    .pov-btn:hover { background: rgba(80,20,20,0.75); color: #f88; }
+  </style>
+</head>
+<body>
+  <button id="settings-btn">&#9881; Settings</button>
+  <div id="settings-panel">
+    <div class="s-section">
+      <div class="s-header" data-target="controls-body">Controls <span class="s-arrow">&#9658;</span></div>
+      <div class="s-body" id="controls-body">
+        Left drag — orbit camera<br>
+        Right drag — pan<br>
+        Scroll — zoom<br>
+        Left click — mine block<br>
+        Right click — place gray block<br>
+        1 — place red block at cursor<br>
+        2 — place green block at cursor<br>
+        WASD — move agent<br>
+        Arrow L/R — turn<br>
+        Arrow U/D — pitch<br>
+        Space — jump
+      </div>
+    </div>
+    <div class="s-section">
+      <div class="s-header" data-target="world-body">World Settings <span class="s-arrow">&#9658;</span></div>
+      <div class="s-body" id="world-body">
+        <div class="s-row">
+          <label>Gravity</label>
+          <input id="gravity-slider" type="range" min="5" max="100" step="0.5" value="50">
+          <span class="val" id="gravity-val">50.0</span>
+        </div>
+      </div>
+    </div>
+    <div class="s-section">
+      <div class="s-header" data-target="agent-body">Agent Settings <span class="s-arrow">&#9658;</span></div>
+      <div class="s-body" id="agent-body">
+        <div class="s-row">
+          <label>Sensitivity</label>
+          <input id="sensitivity-slider" type="range" min="0.01" max="0.2" step="0.005" value="0.08">
+          <span class="val" id="sensitivity-val">0.080</span>
+        </div>
+        <div class="s-row">
+          <button id="control-toggle" style="width:100%;padding:6px;font-family:monospace;font-size:12px;background:#1a3a1a;color:#6f6;border:1px solid #3a6a3a;border-radius:4px;cursor:pointer;">
+            Control: OFF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <button id="regen" class="action-btn">Regenerate</button>
+  <button id="dropAgent" class="action-btn">Drop Agent</button>
+  <button id="placeRed" class="action-btn">Place Red Block</button>
+  <div id="points-wrap">
+    <div id="points">Points: 0</div>
+    <button id="reset-points">Reset</button>
+  </div>
+  <button id="togglePov" class="action-btn">Agent POV</button>
+  <button id="flatWorld" class="action-btn">Flat World</button>
+  <div id="palette">
+    <div class="pal-slot" id="pal-1"><div class="pal-swatch" style="background:#dd2222;"></div>[1] Red</div>
+    <div class="pal-slot" id="pal-2"><div class="pal-swatch" style="background:#22aa44;"></div>[2] Green</div>
+  </div>
+  <div id="pov">
+    <span id="pov-label">AGENT POV</span>
+    <div id="pov-controls">
+      <button class="pov-btn" id="pov-fullscreen-btn" title="Fullscreen">&#x26F6;</button>
+      <button class="pov-btn" id="pov-close-btn" title="Hide">&#x2715;</button>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const W = 30, D = 30, H = 5;
+    const SOLID_LAYERS = 3; // layers 0,1,2 are fully solid
+    // layer 3 = perlin noise, layer 4 = eroded layer 3
+
+    // --- Perlin noise (2D) ---
+    function makePerlin(seed) {
+      // simple permutation-based gradient noise
+      const p = new Uint8Array(512);
+      const base = new Uint8Array(256);
+      for (let i = 0; i < 256; i++) base[i] = i;
+      // shuffle with seed
+      let s = seed >>> 0;
+      for (let i = 255; i > 0; i--) {
+        s = (s * 1664525 + 1013904223) >>> 0;
+        const j = s % (i + 1);
+        [base[i], base[j]] = [base[j], base[i]];
+      }
+      for (let i = 0; i < 512; i++) p[i] = base[i & 255];
+
+      function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+      function lerp(a, b, t) { return a + t * (b - a); }
+      function grad(hash, x, y) {
+        switch (hash & 3) {
+          case 0: return  x + y;
+          case 1: return -x + y;
+          case 2: return  x - y;
+          case 3: return -x - y;
+        }
+      }
+      return function noise(x, y) {
+        const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+        x -= Math.floor(x); y -= Math.floor(y);
+        const u = fade(x), v = fade(y);
+        const a = p[X] + Y, b = p[X+1] + Y;
+        return lerp(
+          lerp(grad(p[a],   x,   y), grad(p[b],   x-1, y),   u),
+          lerp(grad(p[a+1], x,   y-1), grad(p[b+1], x-1, y-1), u),
+          v
+        );
+      };
+    }
+
+    // --- scene setup ---
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(devicePixelRatio);
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a2e);
+    scene.fog = new THREE.Fog(0x1a1a2e, 50, 90);
+
+    const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 200);
+    camera.layers.enableAll(); // sees layer 0 (world) + layer 1 (laser)
+    camera.position.set(35, 25, 35);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(15, 1.5, 15);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.minDistance = 3;
+    controls.maxDistance = 90;
+    controls.mouseButtons = {
+      LEFT: THREE.MOUSE.ROTATE,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: THREE.MOUSE.PAN
+    };
+    controls.update();
+
+    // --- lighting ---
+    scene.add(new THREE.AmbientLight(0x8888bb, 0.6));
+
+    const sun = new THREE.DirectionalLight(0xfff5e0, 1.4);
+    sun.position.set(30, 40, 20);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 120;
+    sun.shadow.camera.left  = -40;
+    sun.shadow.camera.right =  40;
+    sun.shadow.camera.top   =  40;
+    sun.shadow.camera.bottom = -40;
+    scene.add(sun);
+
+    scene.add(new THREE.HemisphereLight(0x6688cc, 0x334411, 0.5));
+
+    const BLOCK_COLOR = 0xcccccc;
+
+    // --- world state ---
+    let world;
+
+    function create3DArray() {
+      return Array.from({length: W}, () =>
+        Array.from({length: H}, () =>
+          new Uint8Array(D)));
+    }
+
+    function generateWorld() {
+      world = create3DArray();
+
+      // solid bottom 3 layers
+      for (let x = 0; x < W; x++)
+        for (let y = 0; y < SOLID_LAYERS; y++)
+          for (let z = 0; z < D; z++)
+            world[x][y][z] = 1;
+
+      // layer 3: perlin noise threshold
+      const noise = makePerlin(Math.random() * 65536 | 0);
+      const SCALE = 0.18; // spatial frequency
+      const THRESHOLD = 0.0; // noise in [-~0.7, ~0.7]; 0 gives ~50% fill
+
+      for (let x = 0; x < W; x++) {
+        for (let z = 0; z < D; z++) {
+          const n = noise(x * SCALE, z * SCALE);
+          if (n > THRESHOLD) {
+            world[x][3][z] = 1;
+          }
+        }
+      }
+
+      // layer 4: erode layer 3 by 1 — only fill where all 4 cardinal neighbors in layer 3 also exist
+      for (let x = 0; x < W; x++) {
+        for (let z = 0; z < D; z++) {
+          if (
+            world[x][3][z] &&
+            x > 0       && world[x-1][3][z] &&
+            x < W-1     && world[x+1][3][z] &&
+            z > 0       && world[x][3][z-1] &&
+            z < D-1     && world[x][3][z+1]
+          ) {
+            world[x][4][z] = 1;
+          }
+        }
+      }
+    }
+
+    // --- mesh management ---
+    const geo = new THREE.BoxGeometry(1, 1, 1);
+    const meshMap = new Map(); // "x,y,z" -> mesh
+
+    function blockKey(x, y, z) { return `${x},${y},${z}`; }
+
+    function addBlock(x, y, z) {
+      const key = blockKey(x, y, z);
+      if (meshMap.has(key)) return;
+      const mat = new THREE.MeshLambertMaterial({ color: BLOCK_COLOR });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData = { x, y, z };
+      scene.add(mesh);
+      meshMap.set(key, mesh);
+    }
+
+    function removeBlock(x, y, z) {
+      const key = blockKey(x, y, z);
+      const mesh = meshMap.get(key);
+      if (!mesh) return;
+      scene.remove(mesh);
+      mesh.material.dispose();
+      meshMap.delete(key);
+      world[x][y][z] = 0;
+      // drop any block directly above
+      if (y + 1 < H && world[x][y+1][z]) removeBlock(x, y+1, z);
+    }
+
+    function buildScene() {
+      for (const mesh of meshMap.values()) {
+        scene.remove(mesh);
+        mesh.material.dispose();
+      }
+      meshMap.clear();
+      for (let x = 0; x < W; x++)
+        for (let y = 0; y < H; y++)
+          for (let z = 0; z < D; z++)
+            if (world[x][y][z]) addBlock(x, y, z);
+    }
+
+    generateWorld();
+    buildScene();
+
+    // --- raycasting ---
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let mouseDownPos = { x: 0, y: 0 };
+
+    renderer.domElement.addEventListener('mousedown', e => {
+      mouseDownPos = { x: e.clientX, y: e.clientY };
+    });
+
+    renderer.domElement.addEventListener('mouseup', e => {
+      const dx = e.clientX - mouseDownPos.x;
+      const dy = e.clientY - mouseDownPos.y;
+      if (Math.sqrt(dx*dx + dy*dy) > 5) return;
+
+      mouse.x =  (e.clientX / innerWidth)  * 2 - 1;
+      mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const hits = raycaster.intersectObjects([...meshMap.values()]);
+      if (!hits.length) return;
+
+      const { x, y, z } = hits[0].object.userData;
+
+      if (e.button === 0) {
+        removeBlock(x, y, z);
+      } else if (e.button === 2) {
+        const n = hits[0].face.normal.clone().round();
+        const nx = x + n.x, ny = y + n.y, nz = z + n.z;
+        if (nx >= 0 && nx < W && ny >= 0 && ny < H && nz >= 0 && nz < D) {
+          if (ny === 0 || world[nx][ny-1][nz]) {
+            world[nx][ny][nz] = 1;
+            addBlock(nx, ny, nz);
+          }
+        }
+      }
+    });
+
+    renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+
+    document.getElementById('regen').addEventListener('click', () => {
+      generateWorld();
+      buildScene();
+    });
+
+    // --- agent ---
+    let agentGroup = null;
+    let aimGroup = null;
+    let povCamera = null;
+    let laserLine = null;
+    const laserRaycaster = new THREE.Raycaster();
+    const keys = new Set();
+    let turnSpeed        = 0.08;
+    const PITCH_LIMIT    = Math.PI / 2 - 0.05;
+    const GROUND_ACCEL   = 40.0;
+    const AIR_ACCEL      = 8.0;
+    const MAX_GROUND_SPD = 110.0;
+    const MAX_AIR_SPD    = 12.0;
+    const GROUND_FRIC    = 12.0;
+    const AIR_DRAG       = 0.3;
+    const JUMP_IMPULSE   = 15.0; // sqrt(2 * 25 * 4.5) = 15 → 4.5 block peak height
+
+    let vx = 0, vy = 0, vz = 0;
+    let onGround = false;
+    let gravityVal = 50.0;
+
+    // settings panel toggle
+    document.getElementById('settings-btn').addEventListener('click', () => {
+      const p = document.getElementById('settings-panel');
+      p.style.display = p.style.display === 'block' ? 'none' : 'block';
+    });
+
+    // section collapse/expand
+    document.querySelectorAll('.s-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const body = document.getElementById(header.dataset.target);
+        const open = body.classList.toggle('open');
+        header.classList.toggle('open', open);
+      });
+    });
+
+    // gravity slider
+    const gravitySlider = document.getElementById('gravity-slider');
+    const gravityValEl  = document.getElementById('gravity-val');
+    gravitySlider.addEventListener('input', () => {
+      gravityVal = parseFloat(gravitySlider.value);
+      gravityValEl.textContent = gravityVal.toFixed(1);
+    });
+
+    // control toggle
+    let playerControlled = false;
+    const controlToggle = document.getElementById('control-toggle');
+    controlToggle.addEventListener('click', () => {
+      playerControlled = !playerControlled;
+      controlToggle.textContent = playerControlled ? 'Control: ON' : 'Control: OFF';
+      controlToggle.style.background  = playerControlled ? '#1a1a3a' : '#1a3a1a';
+      controlToggle.style.color       = playerControlled ? '#66f'    : '#6f6';
+      controlToggle.style.borderColor = playerControlled ? '#3a3a6a' : '#3a6a3a';
+    });
+
+    // sensitivity slider
+    const sensitivitySlider = document.getElementById('sensitivity-slider');
+    const sensitivityValEl  = document.getElementById('sensitivity-val');
+    sensitivitySlider.addEventListener('input', () => {
+      turnSpeed = parseFloat(sensitivitySlider.value);
+      sensitivityValEl.textContent = turnSpeed.toFixed(3);
+    });
+const POV_W = 320, POV_H = 200;
+
+    function surfaceY(x, z) {
+      const xi = Math.max(0, Math.min(W-1, Math.floor(x)));
+      const zi = Math.max(0, Math.min(D-1, Math.floor(z)));
+      for (let y = H - 1; y >= 0; y--) {
+        if (world[xi][y][zi]) return y + 1;
+      }
+      return 0;
+    }
+
+    function spawnAgent() {
+      if (agentGroup) {
+        scene.remove(agentGroup);
+        agentGroup.traverse(o => {
+          if (o.geometry) o.geometry.dispose();
+          if (o.material) o.material.dispose();
+        });
+      }
+
+      agentGroup = new THREE.Group();
+
+      // body
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 1.0, 0.6),
+        new THREE.MeshLambertMaterial({ color: 0x222222 })
+      );
+      body.position.y = 0.5;
+      body.castShadow = true;
+      body.layers.set(1);
+      agentGroup.add(body);
+
+      // head
+      const head = new THREE.Mesh(
+        new THREE.BoxGeometry(0.45, 0.45, 0.45),
+        new THREE.MeshLambertMaterial({ color: 0x444444 })
+      );
+      head.position.y = 1.225;
+      head.castShadow = true;
+      head.layers.set(1);
+      agentGroup.add(head);
+
+      // aim group — pitches around X, anchored at head level
+      aimGroup = new THREE.Group();
+      aimGroup.position.y = 1.225;
+      agentGroup.add(aimGroup);
+
+      // nose nub on aim group
+      const nose = new THREE.Mesh(
+        new THREE.BoxGeometry(0.15, 0.15, 0.2),
+        new THREE.MeshLambertMaterial({ color: 0xff4444 })
+      );
+      nose.position.set(0, 0, -0.325);
+      nose.layers.set(1);
+      aimGroup.add(nose);
+
+      // laser — dynamic length, updated each frame
+      const laserGeo = new THREE.BufferGeometry();
+      laserGeo.setAttribute('position', new THREE.Float32BufferAttribute([0,0,-0.35, 0,0,-1], 3));
+      laserLine = new THREE.Line(laserGeo, new THREE.LineBasicMaterial({ color: 0xff0000 }));
+      laserLine.layers.set(1); // hidden from POV camera
+      aimGroup.add(laserLine);
+
+      // POV camera at eye level, looks along local -Z (same as laser)
+      povCamera = new THREE.PerspectiveCamera(70, POV_W / POV_H, 0.05, 200);
+      aimGroup.add(povCamera);
+
+      // spawn above the world — gravity pulls it down
+      const cx = W / 2, cz = D / 2;
+      agentGroup.position.set(cx, H + 6, cz);
+      vx = 0; vy = 0; vz = 0;
+      onGround = false;
+
+      scene.add(agentGroup);
+      setPovVisible(true);
+    }
+
+    document.getElementById('dropAgent').addEventListener('click', spawnAgent);
+
+    // POV visibility + fullscreen
+    let povVisible = false;
+    let povFullscreen = false;
+    const povEl = document.getElementById('pov');
+
+    function setPovVisible(val) {
+      povVisible = val;
+      povEl.style.display = val ? 'block' : 'none';
+      document.getElementById('togglePov').textContent = val ? 'Hide POV' : 'Agent POV';
+      if (!val) { povFullscreen = false; povEl.classList.remove('pov-fullscreen'); }
+    }
+
+    document.getElementById('togglePov').addEventListener('click', () => {
+      if (!povCamera) return;
+      setPovVisible(!povVisible);
+    });
+
+    document.getElementById('pov-close-btn').addEventListener('click', () => setPovVisible(false));
+
+    document.getElementById('pov-fullscreen-btn').addEventListener('click', () => {
+      povFullscreen = !povFullscreen;
+      povEl.classList.toggle('pov-fullscreen', povFullscreen);
+      document.getElementById('pov-fullscreen-btn').textContent = povFullscreen ? '✕ Exit' : '⛶';
+      document.getElementById('pov-close-btn').style.display = povFullscreen ? 'none' : '';
+    });
+
+    const redBlocks = new Set();
+    let points = 0;
+    const pointsEl = document.getElementById('points');
+    document.getElementById('reset-points').addEventListener('click', () => {
+      points = 0;
+      pointsEl.textContent = 'Points: 0';
+    });
+
+    document.getElementById('placeRed').addEventListener('click', () => {
+      // collect all surface positions (top of existing blocks)
+      const candidates = [];
+      for (let x = 0; x < W; x++)
+        for (let z = 0; z < D; z++) {
+          const sy = surfaceY(x + 0.5, z + 0.5);
+          if (sy > 0 && sy < H) candidates.push([x, sy, z]);
+        }
+      if (!candidates.length) return;
+      const [x, y, z] = candidates[Math.floor(Math.random() * candidates.length)];
+      if (world[x][y][z]) return; // already occupied
+      world[x][y][z] = 1;
+      redBlocks.add(blockKey(x, y, z));
+      const mat = new THREE.MeshLambertMaterial({ color: 0xdd2222 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData = { x, y, z };
+      scene.add(mesh);
+      meshMap.set(blockKey(x, y, z), mesh);
+    });
+
+    window.addEventListener('keydown', e => {
+      if (e.repeat) return;
+      keys.add(e.key);
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+    });
+    window.addEventListener('keyup', e => { keys.delete(e.key); });
+    window.addEventListener('blur', () => { keys.clear(); });
+    window.addEventListener('contextmenu', () => { keys.clear(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) keys.clear(); });
+
+    const A_R = 0.3;  // agent half-width
+    const A_H = 1.5;  // agent height
+
+    function overlapsAny(x, y, z) {
+      const x0 = Math.floor(x - A_R), x1 = Math.floor(x + A_R);
+      const y0 = Math.floor(y),        y1 = Math.floor(y + A_H - 0.001);
+      const z0 = Math.floor(z - A_R), z1 = Math.floor(z + A_R);
+      for (let bx = x0; bx <= x1; bx++)
+        for (let by = y0; by <= y1; by++)
+          for (let bz = z0; bz <= z1; bz++) {
+            if (bx < 0 || bx >= W || by < 0 || by >= H || bz < 0 || bz >= D) continue;
+            if (world[bx][by][bz]) return true;
+          }
+      return false;
+    }
+
+    function updateAgent(dt) {
+      if (!agentGroup) return;
+      dt = Math.min(dt, 0.05);
+
+      const yaw = agentGroup.rotation.y;
+      const fwd   = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+      const right = new THREE.Vector3( Math.cos(yaw), 0, -Math.sin(yaw));
+      const pos = agentGroup.position;
+
+      let wx = 0, wz = 0;
+      if (playerControlled) {
+        // yaw / pitch
+        if (keys.has('ArrowLeft'))  agentGroup.rotation.y += turnSpeed;
+        if (keys.has('ArrowRight')) agentGroup.rotation.y -= turnSpeed;
+        if (keys.has('ArrowUp'))
+          aimGroup.rotation.x = Math.min(PITCH_LIMIT, aimGroup.rotation.x + turnSpeed);
+        if (keys.has('ArrowDown'))
+          aimGroup.rotation.x = Math.max(-PITCH_LIMIT, aimGroup.rotation.x - turnSpeed);
+
+        // jump
+        if (keys.has(' ') && onGround) {
+          vy = JUMP_IMPULSE;
+          onGround = false;
+        }
+
+        // wish direction (WASD projected onto horizontal plane, normalised)
+        if (keys.has('w') || keys.has('W')) { wx += fwd.x;   wz += fwd.z; }
+        if (keys.has('s') || keys.has('S')) { wx -= fwd.x;   wz -= fwd.z; }
+        if (keys.has('a') || keys.has('A')) { wx -= right.x; wz -= right.z; }
+        if (keys.has('d') || keys.has('D')) { wx += right.x; wz += right.z; }
+      }
+      const wlen = Math.sqrt(wx * wx + wz * wz);
+      if (wlen > 0) { wx /= wlen; wz /= wlen; }
+
+      // Source-style acceleration — only add speed if below cap in wish direction
+      const accel  = onGround ? GROUND_ACCEL : AIR_ACCEL;
+      const maxSpd = onGround ? MAX_GROUND_SPD : MAX_AIR_SPD;
+      if (wlen > 0) {
+        const curSpd = vx * wx + vz * wz;
+        const addSpd = Math.min(accel * dt, maxSpd - curSpd);
+        if (addSpd > 0) { vx += wx * addSpd; vz += wz * addSpd; }
+      }
+
+      // friction on ground, light drag in air (multiplicative — no sign flip)
+      const dragFactor = Math.max(0, 1 - (onGround ? GROUND_FRIC : AIR_DRAG) * dt);
+      vx *= dragFactor;
+      vz *= dragFactor;
+
+      // gravity
+      vy -= gravityVal * dt;
+      vy  = Math.max(vy, -40);
+
+      // move each axis, cancel velocity component on block hit
+      const mx = vx * dt, my = vy * dt, mz = vz * dt;
+      if (!overlapsAny(pos.x + mx, pos.y, pos.z)) pos.x += mx; else vx = 0;
+      if (!overlapsAny(pos.x, pos.y, pos.z + mz)) pos.z += mz; else vz = 0;
+      if (!overlapsAny(pos.x, pos.y + my, pos.z)) {
+        pos.y += my;
+        onGround = false;
+      } else {
+        onGround = vy < 0;
+        vy = 0;
+      }
+
+      // red block contact — check blocks directly under feet
+      if (onGround) {
+        const by = Math.floor(pos.y - 0.05);
+        const x0 = Math.floor(pos.x - A_R), x1 = Math.floor(pos.x + A_R);
+        const z0 = Math.floor(pos.z - A_R), z1 = Math.floor(pos.z + A_R);
+        for (let bx = x0; bx <= x1; bx++)
+          for (let bz = z0; bz <= z1; bz++) {
+            const k = blockKey(bx, by, bz);
+            if (redBlocks.has(k)) {
+              redBlocks.delete(k);
+              removeBlock(bx, by, bz);
+              points++;
+              pointsEl.textContent = `Points: ${points}`;
+            }
+          }
+      }
+
+      // laser — raycast to nearest block
+      agentGroup.updateMatrixWorld(true);
+      const origin = new THREE.Vector3();
+      aimGroup.getWorldPosition(origin);
+      const dir = new THREE.Vector3(0, 0, -1).transformDirection(aimGroup.matrixWorld).normalize();
+      laserRaycaster.set(origin, dir);
+      laserRaycaster.far = 80;
+      const hits = laserRaycaster.intersectObjects([...meshMap.values()]);
+      const dist = hits.length ? hits[0].distance : 80;
+      const arr = laserLine.geometry.attributes.position.array;
+      arr[5] = -dist;
+      laserLine.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // --- flat world ---
+    function flatWorld() {
+      for (let x = 0; x < W; x++)
+        for (let z = 0; z < D; z++)
+          for (let y = SOLID_LAYERS; y < H; y++)
+            if (world[x][y][z]) removeBlock(x, y, z);
+    }
+    document.getElementById('flatWorld').addEventListener('click', flatWorld);
+
+    // --- hover highlight ---
+    const hoverGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.01, 1.01, 1.01));
+    const hoverMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+    const hoverBox = new THREE.LineSegments(hoverGeo, hoverMat);
+    hoverBox.visible = false;
+    scene.add(hoverBox);
+
+    // current hovered face info — updated on mousemove
+    let hoveredFace = null; // { x, y, z, nx, ny, nz }  (block coords + face normal)
+    const mousePosNDC = new THREE.Vector2();
+
+    renderer.domElement.addEventListener('mousemove', e => {
+      mousePosNDC.x =  (e.clientX / innerWidth)  * 2 - 1;
+      mousePosNDC.y = -(e.clientY / innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mousePosNDC, camera);
+      const hits = raycaster.intersectObjects([...meshMap.values()]);
+
+      if (hits.length) {
+        const { x, y, z } = hits[0].object.userData;
+        const n = hits[0].face.normal.clone().round();
+        hoveredFace = { x, y, z, nx: n.x, ny: n.y, nz: n.z };
+        hoverBox.position.set(x + 0.5, y + 0.5, z + 0.5);
+        hoverBox.visible = true;
+      } else {
+        hoveredFace = null;
+        hoverBox.visible = false;
+      }
+    });
+
+    renderer.domElement.addEventListener('mouseleave', () => {
+      hoveredFace = null;
+      hoverBox.visible = false;
+    });
+
+    // --- colored block placement helper ---
+    const greenBlocks = new Set();
+
+    function placeColoredBlock(color, trackSet) {
+      if (!hoveredFace) return;
+      const { x, y, z, nx, ny, nz } = hoveredFace;
+      const bx = x + nx, by = y + ny, bz = z + nz;
+      if (bx < 0 || bx >= W || by < 0 || by >= H || bz < 0 || bz >= D) return;
+      if (world[bx][by][bz]) return; // already occupied
+      if (by > 0 && !world[bx][by-1][bz]) return; // no support below
+      world[bx][by][bz] = 1;
+      trackSet.add(blockKey(bx, by, bz));
+      const mat = new THREE.MeshLambertMaterial({ color });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(bx + 0.5, by + 0.5, bz + 0.5);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData = { x: bx, y: by, z: bz };
+      scene.add(mesh);
+      meshMap.set(blockKey(bx, by, bz), mesh);
+    }
+
+    // --- palette highlight ---
+    let lastPalKey = null;
+    function updatePalette(key) {
+      if (key === lastPalKey) return;
+      lastPalKey = key;
+      document.getElementById('pal-1').classList.toggle('pal-active', key === '1');
+      document.getElementById('pal-2').classList.toggle('pal-active', key === '2');
+    }
+
+    // --- key handlers for 1 / 2 ---
+    // --- F5 GUI toggle ---
+    const guiEls = [
+      document.getElementById('settings-btn'),
+      document.getElementById('settings-panel'),
+      document.getElementById('regen'),
+      document.getElementById('dropAgent'),
+      document.getElementById('placeRed'),
+      document.getElementById('togglePov'),
+      document.getElementById('flatWorld'),
+      document.getElementById('points-wrap'),
+      document.getElementById('palette'),
+      document.getElementById('pov'),
+    ];
+    let guiVisible = true;
+    window.addEventListener('keydown', e => {
+      if (e.key === 'F5') {
+        e.preventDefault();
+        guiVisible = !guiVisible;
+        for (const el of guiEls) {
+          if (!el) continue;
+          el.style.display = guiVisible ? '' : 'none';
+        }
+        return;
+      }
+      if (e.repeat) return;
+      if (e.key === '1') { updatePalette('1'); placeColoredBlock(0xdd2222, redBlocks); }
+      if (e.key === '2') { updatePalette('2'); placeColoredBlock(0x22aa44, greenBlocks); }
+    });
+    window.addEventListener('keyup', e => {
+      if (e.key === '1' || e.key === '2') updatePalette(null);
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    renderer.autoClear = false;
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = clock.getDelta();
+      updateAgent(dt);
+      controls.update();
+
+      // main view
+      renderer.setScissorTest(false);
+      renderer.setViewport(0, 0, innerWidth, innerHeight);
+      renderer.clear();
+      renderer.render(scene, camera);
+
+      // POV inset / fullscreen
+      if (povCamera && povVisible) {
+        let px, py, pw, ph;
+        if (povFullscreen) {
+          px = 0; py = 0; pw = innerWidth; ph = innerHeight;
+          povCamera.aspect = pw / ph;
+        } else {
+          px = innerWidth - POV_W - 16;
+          py = 16;
+          pw = POV_W; ph = POV_H;
+          povCamera.aspect = POV_W / POV_H;
+        }
+        povCamera.updateProjectionMatrix();
+        renderer.setScissorTest(true);
+        renderer.setScissor(px, py, pw, ph);
+        renderer.setViewport(px, py, pw, ph);
+        renderer.clear();
+        renderer.render(scene, povCamera);
+        renderer.setScissorTest(false);
+      }
+    }
+    animate();
+  </script>
+</body>
+</html>

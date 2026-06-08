@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>quick demo for Sparse :)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0f;
+      color: #e8e8f0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      text-align: center;
+      padding: 18px 0 14px;
+      background: linear-gradient(180deg, #0d0d18 0%, transparent 100%);
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-family: 'EB Garamond', Garamond, 'Times New Roman', serif;
+      font-size: 2.2rem;
+      font-weight: 400;
+      letter-spacing: 0.03em;
+      color: #ffffff;
+    }
+
+    header p {
+      font-family: 'EB Garamond', Garamond, 'Times New Roman', serif;
+      font-size: 1.05rem;
+      font-style: normal;
+      color: rgba(255,255,255,0.72);
+      max-width: 640px;
+      margin: 10px auto 0;
+      line-height: 1.7;
+      letter-spacing: 0.01em;
+    }
+
+    .panels {
+      display: flex;
+      gap: 16px;
+      padding: 0 16px 16px;
+      align-items: flex-start;
+    }
+
+    .panel {
+      flex: 1;
+      border-radius: 12px;
+      border: 2px solid rgba(255,255,255,0.9);
+      background: rgba(255,255,255,0.03);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .panel-label {
+      position: absolute;
+      top: 12px;
+      left: 16px;
+      font-family: 'EB Garamond', Garamond, 'Times New Roman', serif;
+      font-size: 0.85rem;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: none;
+      color: rgba(255,255,255,0.55);
+      z-index: 10;
+      pointer-events: none;
+    }
+
+
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+
+    /* drop zone overlay for GLB panel */
+    #drop-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: rgba(10,10,20,0.82);
+      border-radius: 12px;
+      z-index: 20;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #drop-overlay:hover { background: rgba(15,15,30,0.88); }
+    #drop-overlay.drag-over { background: rgba(120,90,200,0.25); border: 2px dashed #b48fff; }
+
+    #drop-overlay svg { opacity: 0.5; }
+
+    #drop-overlay p {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.45);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    #drop-overlay .hint {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.25);
+    }
+
+    #glb-input { display: none; }
+
+  </style>
+</head>
+<body>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<header>
+  <h1>quick demo for Sparse&nbsp;:)</h1>
+  <p>When AI understands geometry, it can learn from raw video alone. This means no need for any sensor, label, or costly robot time. This kind of spatial awareness will change the world.</p>
+
+  <p style="margin-top: 48px; max-width: 860px;">Take a look at this footage of a simple voxel world with two blocks that can't be fully seen from any single direction. Yet with an understanding of how this simulated world is built, we're able to reconstruct the entire scene.</p>
+</header>
+
+<div class="panels">
+
+  <!-- LEFT: Input footage -->
+  <div class="panel" id="voxel-panel">
+    <span class="panel-label">Input Footage</span>
+
+    <video id="footage-video" src="footage2.mkv" autoplay loop muted playsinline
+      style="width:100%;display:block;background:#000;border-radius:12px;"></video>
+  </div>
+
+  <!-- RIGHT: VGGT-omega point cloud -->
+  <div class="panel" id="glb-panel">
+    <span class="panel-label">Point Cloud</span>
+
+    <canvas id="glb-canvas"></canvas>
+    <div id="drop-overlay" style="display:none"></div>
+  </div>
+
+</div>
+
+<p style="font-family: 'EB Garamond', Garamond, 'Times New Roman', serif; font-size: 1.05rem; color: rgba(255,255,255,0.72); max-width: 860px; margin: 36px auto 32px; line-height: 1.7; letter-spacing: 0.01em; text-align: center;">Now imagine it has that same deep knowledge of the real world's physics and structures. What happens then?</p>
+
+<!-- SECOND ROW: coke -->
+<div class="panels">
+
+  <div class="panel" id="coke-video-panel">
+    <span class="panel-label">Input Footage</span>
+    <video id="coke-video" src="coke.mov" autoplay loop muted playsinline
+      style="width:100%;display:block;background:#000;border-radius:12px;"></video>
+  </div>
+
+  <div class="panel" id="coke-glb-panel">
+    <span class="panel-label">Point Cloud</span>
+    <canvas id="coke-canvas"></canvas>
+  </div>
+
+</div>
+
+<p style="font-family: 'EB Garamond', Garamond, 'Times New Roman', serif; font-size: 1.05rem; color: rgba(255,255,255,0.72); max-width: 860px; margin: 36px auto 40px; line-height: 1.7; letter-spacing: 0.01em; text-align: center;">Can't wait for what the future holds!</p>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://esm.sh/three@0.163.0",
+    "three/addons/": "https://esm.sh/three@0.163.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// ─────────────────────────────────────────────
+//  Shared resize helper
+// ─────────────────────────────────────────────
+function fitRenderer(renderer, canvas) {
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  if (renderer.domElement.width !== w || renderer.domElement.height !== h) {
+    renderer.setSize(w, h, false);
+    return true;
+  }
+  return false;
+}
+
+// LEFT PANEL — footage2.mkv rendered via <video> tag in HTML
+
+
+// ═══════════════════════════════════════════════
+//  RIGHT PANEL — VGGT-omega GLB → Point Cloud
+// ═══════════════════════════════════════════════
+(function () {
+  const canvas  = document.getElementById('glb-canvas');
+  const overlay = document.getElementById('drop-overlay');
+  const input   = document.getElementById('glb-input');
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x080810);
+
+  const camera = new THREE.PerspectiveCamera(55, 1, 0.01, 500);
+  camera.position.set(0, 1, 3);
+
+  const controls = new OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.07;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.5;
+
+  // ambient stars
+  const starGeo2 = new THREE.BufferGeometry();
+  const sp2 = new Float32Array(400 * 3);
+  for (let i = 0; i < 400; i++) {
+    sp2[i*3]   = (Math.random() - 0.5) * 100;
+    sp2[i*3+1] = (Math.random() - 0.5) * 100;
+    sp2[i*3+2] = (Math.random() - 0.5) * 100;
+  }
+  starGeo2.setAttribute('position', new THREE.BufferAttribute(sp2, 3));
+  scene.add(new THREE.Points(starGeo2, new THREE.PointsMaterial({ color: 0x445566, size: 0.18 })));
+
+  // loading label
+  const loadingEl = document.createElement('div');
+  loadingEl.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:rgba(255,255,255,0.3);letter-spacing:0.1em;z-index:5;pointer-events:none';
+  loadingEl.textContent = 'loading output2.glb…';
+  document.getElementById('glb-panel').appendChild(loadingEl);
+
+  let pointCloud = null;
+
+  // ── Convert loaded GLTF to point cloud ──────
+  function gltfToPointCloud(gltf) {
+    const positions = [];
+    const colors    = [];
+
+    // ── 1. Grab native Points geometry (the actual reconstruction) ──
+    gltf.scene.traverse(node => {
+      if (!node.isPoints) return;
+      node.updateWorldMatrix(true, false);
+      const posAttr = node.geometry.getAttribute('position');
+      const colAttr = node.geometry.getAttribute('color');
+      const tmp = new THREE.Vector3();
+      for (let i = 0; i < posAttr.count; i++) {
+        tmp.fromBufferAttribute(posAttr, i).applyMatrix4(node.matrixWorld);
+        positions.push(tmp.x, tmp.y, tmp.z);
+        if (colAttr) {
+          colors.push(colAttr.getX(i), colAttr.getY(i), colAttr.getZ(i));
+        } else {
+          colors.push(1, 1, 1);
+        }
+      }
+    });
+
+    // ── 2. If no Points found, fall back: sample mesh triangles ──
+    if (positions.length === 0) {
+      gltf.scene.traverse(node => {
+        if (!node.isMesh) return;
+        node.updateWorldMatrix(true, false);
+        const geo     = node.geometry;
+        const posAttr = geo.getAttribute('position');
+        const colAttr = geo.getAttribute('color');
+        const idxAttr = geo.index;
+        const tmp = new THREE.Vector3();
+        const count = posAttr.count;
+        for (let i = 0; i < count; i++) {
+          tmp.fromBufferAttribute(posAttr, i).applyMatrix4(node.matrixWorld);
+          positions.push(tmp.x, tmp.y, tmp.z);
+          if (colAttr) {
+            colors.push(colAttr.getX(i), colAttr.getY(i), colAttr.getZ(i));
+          } else {
+            const t = Math.max(0, Math.min(1, (tmp.y + 1) * 0.5));
+            const c = new THREE.Color().setHSL(0.58 - t * 0.45, 0.9, 0.4 + t * 0.3);
+            colors.push(c.r, c.g, c.b);
+          }
+        }
+      });
+    }
+
+    if (positions.length === 0) return null;
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('color',    new THREE.Float32BufferAttribute(colors, 3));
+    geo.computeBoundingSphere();
+
+    const mat = new THREE.PointsMaterial({
+      size: 0.005,
+      vertexColors: true,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.95,
+    });
+
+    return new THREE.Points(geo, mat);
+  }
+
+  function loadGLB(arrayBuffer) {
+    const loader = new GLTFLoader();
+    loader.parse(arrayBuffer, '', gltf => {
+      if (pointCloud) scene.remove(pointCloud);
+
+      pointCloud = gltfToPointCloud(gltf);
+      if (!pointCloud) { loadingEl.textContent = 'no geometry found in glb'; return; }
+
+      scene.add(pointCloud);
+
+      // fit camera
+      const sphere = pointCloud.geometry.boundingSphere;
+      const r = sphere.radius;
+      camera.position.copy(sphere.center).addScaledVector(new THREE.Vector3(0.4, 0.2, 1).normalize(), r * 1.4);
+      controls.target.copy(sphere.center);
+      controls.update();
+
+      // auto-size points relative to scene
+      pointCloud.material.size = Math.max(r * 0.02, 0.008);
+    }, err => console.error(err));
+  }
+
+  // ── Auto-load output2.glb ────────────────────
+  fetch('output2.glb')
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+    .then(buf => { loadingEl.style.display = 'none'; loadGLB(buf); })
+    .catch(err => { loadingEl.textContent = 'could not load output2.glb (' + err.message + ')'; });
+
+  // Animate
+  function tick() {
+    requestAnimationFrame(tick);
+    fitRenderer(renderer, canvas);
+    const aspect = canvas.clientWidth / canvas.clientHeight;
+    if (camera.aspect !== aspect) { camera.aspect = aspect; camera.updateProjectionMatrix(); }
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  tick();
+})();
+
+// ── Sync panel heights to video's natural height ──
+function syncHeight(videoEl, ...targets) {
+  const h = videoEl.offsetHeight;
+  if (!h) return;
+  targets.forEach(el => el.style.height = h + 'px');
+}
+
+const vid = document.getElementById('footage-video');
+const glbPanel = document.getElementById('glb-panel');
+const glbCanvas = document.getElementById('glb-canvas');
+vid.addEventListener('loadedmetadata', () => syncHeight(vid, glbPanel, glbCanvas));
+vid.addEventListener('resize', () => syncHeight(vid, glbPanel, glbCanvas));
+window.addEventListener('resize', () => syncHeight(vid, glbPanel, glbCanvas));
+if (vid.readyState >= 1) syncHeight(vid, glbPanel, glbCanvas);
+
+const cokeVid = document.getElementById('coke-video');
+const cokeGlbPanel = document.getElementById('coke-glb-panel');
+const cokeCanvas = document.getElementById('coke-canvas');
+cokeVid.addEventListener('loadedmetadata', () => syncHeight(cokeVid, cokeGlbPanel, cokeCanvas));
+cokeVid.addEventListener('resize', () => syncHeight(cokeVid, cokeGlbPanel, cokeCanvas));
+window.addEventListener('resize', () => syncHeight(cokeVid, cokeGlbPanel, cokeCanvas));
+if (cokeVid.readyState >= 1) syncHeight(cokeVid, cokeGlbPanel, cokeCanvas);
+
+// ── Coke point cloud viewer ───────────────────
+(function () {
+  const canvas = document.getElementById('coke-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x080810);
+
+  const camera = new THREE.PerspectiveCamera(55, 1, 0.01, 500);
+  camera.position.set(0, 1, 3);
+
+  const controls = new OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.07;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.5;
+
+  // stars
+  const sg = new THREE.BufferGeometry();
+  const sp = new Float32Array(400 * 3);
+  for (let i = 0; i < 400; i++) { sp[i*3]=(Math.random()-.5)*100; sp[i*3+1]=(Math.random()-.5)*100; sp[i*3+2]=(Math.random()-.5)*100; }
+  sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+  scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0x445566, size: 0.18 })));
+
+  const loadingEl = document.createElement('div');
+  loadingEl.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:rgba(255,255,255,0.3);letter-spacing:0.1em;z-index:5;pointer-events:none';
+  loadingEl.textContent = 'loading coke.glb…';
+  document.getElementById('coke-glb-panel').appendChild(loadingEl);
+
+  let pointCloud = null;
+
+  function gltfToPointCloud(gltf) {
+    const positions = [], colors = [];
+    gltf.scene.traverse(node => {
+      if (!node.isPoints) return;
+      node.updateWorldMatrix(true, false);
+      const posAttr = node.geometry.getAttribute('position');
+      const colAttr = node.geometry.getAttribute('color');
+      const tmp = new THREE.Vector3();
+      for (let i = 0; i < posAttr.count; i++) {
+        tmp.fromBufferAttribute(posAttr, i).applyMatrix4(node.matrixWorld);
+        positions.push(tmp.x, tmp.y, tmp.z);
+        colors.push(colAttr ? colAttr.getX(i) : 1, colAttr ? colAttr.getY(i) : 1, colAttr ? colAttr.getZ(i) : 1);
+      }
+    });
+    if (positions.length === 0) {
+      gltf.scene.traverse(node => {
+        if (!node.isMesh) return;
+        node.updateWorldMatrix(true, false);
+        const posAttr = node.geometry.getAttribute('position');
+        const colAttr = node.geometry.getAttribute('color');
+        const tmp = new THREE.Vector3();
+        for (let i = 0; i < posAttr.count; i++) {
+          tmp.fromBufferAttribute(posAttr, i).applyMatrix4(node.matrixWorld);
+          positions.push(tmp.x, tmp.y, tmp.z);
+          if (colAttr) { colors.push(colAttr.getX(i), colAttr.getY(i), colAttr.getZ(i)); }
+          else { const t = Math.max(0,Math.min(1,(tmp.y+1)*.5)); const c=new THREE.Color().setHSL(.58-t*.45,.9,.4+t*.3); colors.push(c.r,c.g,c.b); }
+        }
+      });
+    }
+    if (positions.length === 0) return null;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('color',    new THREE.Float32BufferAttribute(colors, 3));
+    geo.computeBoundingSphere();
+    return new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.005, vertexColors: true, sizeAttenuation: true, transparent: true, opacity: 0.95 }));
+  }
+
+  function loadGLB(buf) {
+    new GLTFLoader().parse(buf, '', gltf => {
+      if (pointCloud) scene.remove(pointCloud);
+      pointCloud = gltfToPointCloud(gltf);
+      if (!pointCloud) { loadingEl.textContent = 'no geometry found'; return; }
+      scene.add(pointCloud);
+      const sphere = pointCloud.geometry.boundingSphere;
+      const r = sphere.radius;
+      camera.position.copy(sphere.center).addScaledVector(new THREE.Vector3(0.4, 0.2, 1).normalize(), r * 1.4);
+      controls.target.copy(sphere.center);
+      controls.update();
+      pointCloud.material.size = Math.max(r * 0.02, 0.008);
+    }, err => console.error(err));
+  }
+
+  fetch('coke.glb')
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+    .then(buf => { loadingEl.style.display = 'none'; loadGLB(buf); })
+    .catch(err => { loadingEl.textContent = 'could not load coke.glb (' + err.message + ')'; });
+
+  function tick() {
+    requestAnimationFrame(tick);
+    fitRenderer(renderer, canvas);
+    const aspect = canvas.clientWidth / canvas.clientHeight;
+    if (camera.aspect !== aspect) { camera.aspect = aspect; camera.updateProjectionMatrix(); }
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  tick();
+})();
+</script>
+</body>
+</html>
